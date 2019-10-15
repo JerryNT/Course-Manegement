@@ -31,6 +31,7 @@ public class CourseService {
     private UserService userService;
 
     List<CourseDto> courseDtos = new ArrayList<>();
+    List<CourseWithTNDto> courseWithTNDtos = new ArrayList<>();
 
     public List<CourseDto> findAllCourses() {
 
@@ -70,17 +71,27 @@ public class CourseService {
         }
     }
 
+    public void unregisterCourse(String courseName) throws Exception{
+        Optional<User> curUser = userService.getUserWithAuthorities();
+        Optional<Course> curCourse = courseRepository.findCourseByCourseName(courseName);
+        if (curUser.isPresent() && curCourse.isPresent()){
+            userCourseRepository.delete(userCourseRepository.findUserCourseByUserAndCourse(curUser.get(), curCourse.get()).get());
+        } else {
+            throw new Exception("UnExpected Exception");
+        }
+    }
+
     public void addCourse(CourseDto course) throws Exception{
         Optional<Course> courseDto = courseRepository.findCourseByCourseName(course.getCourseName());
 
         if(courseDto.isPresent()){
             throw new Exception("Course is existing.");
         }
-
+        System.out.println("Service   " + course.getTeacherId());
         Course courseBeingSaved = Course.builder()
             .courseName(course.getCourseName())
             .courseContent(course.getCourseContent())
-            .courseLocation(course.getCourseContent())
+            .courseLocation(course.getCourseLocation())
             .teacherId(course.getTeacherId())
             .build();
 
@@ -120,5 +131,28 @@ public class CourseService {
         existingCourse.setCourseName(course.getCourseName());
         existingCourse.setTeacherId(course.getTeacherId());
 
+    }
+
+    public List<CourseWithTNDto> findAllCoursesWithId(String id) {
+        Long curId = Long.valueOf(id);
+        return courseRepository.findAllCoursesDtoWithId(curId);
+    }
+
+    public List<CourseWithTNDto> findAllEnrolledCourses(Long ID){
+        List<CourseWithTNDto> CourseWithTNDtos = new ArrayList<>();
+        Optional<User> curUser = userService.getUserWithAuthorities(ID);
+
+        if (curUser.isPresent()){
+            CourseWithTNDtos = courseRepository.findAllCoursesDtoWithId(ID);
+        } else {
+            try {
+                throw new Exception("UnExpected Exception");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return CourseWithTNDtos;
+        }
+
+        return CourseWithTNDtos;
     }
 }

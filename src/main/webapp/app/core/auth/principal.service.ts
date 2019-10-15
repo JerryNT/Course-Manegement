@@ -4,7 +4,7 @@ import { AccountService } from './account.service';
 
 @Injectable({ providedIn: 'root' })
 export class Principal {
-    private userIdentity: any;
+    userIdentity: any;
     private authenticated = false;
     private authenticationState = new Subject<any>();
 

@@ -1,10 +1,12 @@
 package com.mycompany.myapp.web.rest;
 
+import com.mycompany.myapp.domain.User;
 import com.mycompany.myapp.domain.dto.CourseDto;
 import com.mycompany.myapp.domain.dto.CourseWithTNDto;
 import com.mycompany.myapp.service.CourseService;
+import com.mycompany.myapp.service.UserService;
 import io.swagger.annotations.Api;
-import org.hibernate.validator.constraints.NotBlank;
+import javax.validation.constraints.NotBlank;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpStatus;
@@ -13,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.constraints.NotNull;
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping
@@ -20,6 +23,9 @@ import java.util.List;
 public class CourseController {
     @Autowired
     private CourseService courseService;
+
+    @Autowired
+    private UserService userService;
 
     @GetMapping(path = "/api/course/findAllCourses", produces = "application/json")
     public HttpEntity<List<CourseDto>> findAllCourses(){
@@ -43,6 +49,24 @@ public class CourseController {
         return new ResponseEntity<>(allCourses, HttpStatus.OK);
     }
 
+    @GetMapping(path = "/api/user/findId/{teacherName}", produces = "application/json")
+    public HttpEntity<String> findId(@PathVariable String teacherName){
+        Optional<User> teacherUser = userService.getUserWithAuthoritiesByLogin(teacherName);
+        if (teacherUser.isPresent()) {
+            String id= String.valueOf(teacherUser.get().getId());
+            return new ResponseEntity<>(id, HttpStatus.OK);
+        }
+        return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+    }
+
+    @GetMapping(path = "/api/course/findEnrolledCoursesWithTNDto/{id}", produces = "application/json")
+    public HttpEntity<List<CourseWithTNDto>> findEnrolledCoursesWithTNDto(@PathVariable String id){
+        List<CourseWithTNDto> allCourses = courseService.findAllCoursesWithId(id);
+
+        return new ResponseEntity<>(allCourses, HttpStatus.OK);
+    }
+
+
     @PostMapping(path = "/api/course/registerCourse/{courseName}", produces = "application/json")
     public HttpStatus registerCourse(@PathVariable String courseName) {
         try {
@@ -53,10 +77,19 @@ public class CourseController {
         }
     }
 
-    @PostMapping(path = "/api/course/addCourse", produces = "application/json")
-    public HttpStatus addCourse(@RequestBody @NotNull CourseDto course) {
+    @PostMapping(path = "/api/course/addCourse/{teacherId}", produces = "application/json")
+    public HttpStatus addCourse(@PathVariable long teacherId,@RequestBody @NotNull CourseDto course) {
+        System.out.println(course.getTeacherId());
         try {
-            courseService.addCourse(course);
+            System.out.println("teacherId");
+            CourseDto courseDto= CourseDto.builder()
+                .courseName(course.getCourseName())
+                .courseContent(course.getCourseContent())
+                .courseLocation(course.getCourseLocation())
+                //.teacherId(course.getTeacherId())
+                .teacherId(teacherId)
+                .build();
+            courseService.addCourse(courseDto);
             return HttpStatus.OK;
         } catch (Exception e) {
             return HttpStatus.BAD_REQUEST;
@@ -80,6 +113,16 @@ public class CourseController {
             return HttpStatus.OK;
         } catch (Exception e) {
             return HttpStatus.BAD_REQUEST;
+        }
+    }
+
+    @DeleteMapping(path = "/api/course/unregisterCourse/{courseName}", produces = "application/json")
+    public HttpStatus unregisterCourse(@PathVariable String courseName) {
+        try {
+            courseService.unregisterCourse(courseName);
+            return HttpStatus.OK;
+        } catch (Exception e) {
+            return HttpStatus.UNPROCESSABLE_ENTITY;
         }
     }
 }
